@@ -1,0 +1,26 @@
+id: api8-security-misconfiguration-baseline
+
+info:
+  name: API8 Security Misconfiguration - Server Error Exposure
+  author: dast-scanner
+  severity: medium
+  description: >
+    Unchanged: keys-regex '.*' is already dictionary-free.
+  classification: { cwe-id: CWE-209 }
+  tags: api,owasp-api8,misconfiguration,error-disclosure,dast
+
+http:
+  - fuzzing:
+      - part: query
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        fuzz: ['__probe_marker__', '', 'null', "' OR '1'='1", '{{7*7}}', "../../../../etc/passwd"]
+      - part: body
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        fuzz: ['__probe_marker__', 'null', "' OR '1'='1", '{{7*7}}', "../../../../etc/passwd"]
+    matchers:
+      - type: dsl
+        dsl: ['status_code >= 500']

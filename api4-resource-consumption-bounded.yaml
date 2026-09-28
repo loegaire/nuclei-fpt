@@ -1,0 +1,32 @@
+id: api4-resource-consumption-bounded
+
+info:
+  name: API4 Unrestricted Resource Consumption - Bounded Amplification (value-shape aware)
+  author: dast-scanner
+  severity: medium
+  description: >
+    Instead of guessing parameter names (limit/page_size/...), this matches
+    fields by their CURRENT value shape: nuclei's openapi mode already fills
+    integer-typed fields with a numeric placeholder, so any field currently
+    holding a numeric value is a candidate for amplification — dictionary-free
+    and works identically on real captured traffic.
+  classification: { cwe-id: CWE-770 }
+  tags: api,owasp-api4,resource-consumption,dast,openapi
+
+http:
+  - fuzzing:
+      - part: query
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        values: ['^-?[0-9]+$']
+        fuzz: ['0', '-1', '1000', '1000000', '2147483648']
+      - part: body
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        values: ['^-?[0-9]+$']
+        fuzz: ['0', '-1', '1000', '1000000', '2147483648']
+    matchers:
+      - type: dsl
+        dsl: ['(status_code >= 200 && status_code < 400) || status_code >= 500']

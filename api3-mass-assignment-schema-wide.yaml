@@ -1,0 +1,55 @@
+id: api3-mass-assignment-schema-wide
+
+info:
+  name: API3 Broken Object Property Authorization - Writable Field Mutation
+  author: dast-scanner
+  severity: high
+  description: >
+    Unchanged: already dictionary-free (keys-regex '.*' hits every field
+    regardless of name). This is the correct default when there's no native
+    way to know WHICH fields are sensitive — mutate all of them, let the
+    downstream agent triage.
+  classification: { cwe-id: CWE-915 }
+  tags: api,owasp-api3,mass-assignment,property-authorization,dast
+
+http:
+  - pre-condition:
+      - type: dsl
+        dsl:
+          - 'method != "GET"'
+          - 'method != "HEAD"'
+          - 'method != "OPTIONS"'
+        condition: and
+    fuzzing:
+      - part: body
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        fuzz:
+          - ''
+          - ' '
+          - 'null'
+          - 'undefined'
+          - 'true'
+          - 'false'
+          - 'NaN'
+          - '0'
+          - '-1'
+          - '1'
+          - '999999'
+          - '2147483648'
+          - '3.14159'
+          - '[]'
+          - '{}'
+          - '[null]'
+          - '{"__probe_marker__":true}'
+          - '["__probe_marker__"]'
+          - '"__probe_marker__"'
+          - 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+          - "тест_测试_🔥"
+          - "' OR '1'='1"
+          - "../../../../etc/passwd"
+          - "{{7*7}}"
+    matchers:
+      - type: dsl
+        dsl: ['status_code >= 200 && status_code < 400']

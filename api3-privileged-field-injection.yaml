@@ -1,0 +1,54 @@
+id: api3-privileged-field-injection
+info:
+  name: API3 Broken Object Property Authorization - Privileged Field Injection (wordlist)
+  author: dast-scanner
+  severity: critical
+  description: 'Injects a broad, categorized wordlist of commonly server-controlled / privileged property names into every non-GET body, on top of whatever the client actually sent, and reports every acceptance. Two things fire together: (1) a keys-regex pass that OVERWRITES any of these names if they already exist in the body with a placeholder/normal value, and (2) a postfix pass that INJECTS the full set as new fields even if the client-facing schema never declared them. Covers authorization/role, financial, ownership/identity, verification/moderation, account-state, quota/limit, audit/system, feature-flag, and security-control field families, each with camelCase, snake_case, and bare variants.'
+  classification:
+    cwe-id: CWE-915
+  tags: api,owasp-api3,mass-assignment,property-authorization,privilege-escalation,dast
+variables:
+  privileged_fields_json: '"role":"admin","roles":["admin"],"userRole":"admin","user_role":"admin","isAdmin":true,"is_admin":true,"admin":true,"administrator":true,"isSuperuser":true,"is_superuser":true,"superuser":true,"isStaff":true,"is_staff":true,"isRoot":true,"is_root":true,"isOwner":true,"is_owner":true,"permissions":["*"],"permission":"*","scope":"admin","scopes":["admin"],"grants":["*"],"privilege":"admin","privileges":["admin"],"accessLevel":"admin","access_level":"admin","authLevel":9999,"clearanceLevel":9999,"tier":"enterprise","accountType":"admin","account_type":"admin","membershipTier":"premium","plan":"enterprise","price":0,"amount":0,"cost":0,"total":0,"totalAmount":0,"subtotal":0,"discount":100,"discountPercent":100,"tax":0,"fee":0,"fees":0,"balance":999999,"credit":999999,"credits":999999,"walletBalance":999999,"wallet_balance":999999,"points":999999,"loyaltyPoints":999999,"refundAmount":999999,"creditLimit":999999,"credit_limit":999999,"ownerId":1,"owner_id":1,"userId":1,"user_id":1,"accountId":1,"account_id":1,"organizationId":1,"organization_id":1,"tenantId":1,"tenant_id":1,"createdBy":1,"created_by":1,"assignedTo":1,"assigned_to":1,"customerId":1,"customer_id":1,"verified":true,"isVerified":true,"is_verified":true,"emailVerified":true,"email_verified":true,"phoneVerified":true,"kycVerified":true,"kyc_verified":true,"approved":true,"isApproved":true,"is_approved":true,"status":"approved","state":"approved","reviewStatus":"approved","moderationStatus":"approved","published":true,"isPublished":true,"flagged":false,"is_flagged":false,"banned":false,"is_banned":false,"suspended":false,"is_suspended":false,"blocked":false,"is_blocked":false,"active":true,"isActive":true,"is_active":true,"enabled":true,"isEnabled":true,"is_enabled":true,"disabled":false,"is_disabled":false,"locked":false,"isLocked":false,"is_locked":false,"trial":false,"isTrial":false,"trialExpired":false,"subscriptionActive":true,"limit":999999,"maxLimit":999999,"quota":999999,"rateLimit":999999,"rate_limit":999999,"maxUsers":999999,"maxRequests":999999,"usageLimit":999999,"storageLimit":999999,"apiCallsRemaining":999999,"readOnly":false,"read_only":false,"immutable":false,"internal":false,"isInternal":false,"is_internal":false,"isSystem":false,"is_system":false,"isTest":false,"debug":false,"isDeleted":false,"is_deleted":false,"deletedAt":null,"expiresAt":"2099-12-31T23:59:59Z","expires_at":"2099-12-31T23:59:59Z","validUntil":"2099-12-31T23:59:59Z","createdAt":"1970-01-01T00:00:00Z","updatedAt":"1970-01-01T00:00:00Z","featureFlags":["all"],"feature_flags":["all"],"beta":true,"isBeta":true,"earlyAccess":true,"whitelisted":true,"isWhitelisted":true,"is_whitelisted":true,"blacklisted":false,"twoFactorEnabled":false,"mfaEnabled":false,"mfa_required":false,"passwordResetRequired":false,"forcePasswordChange":false,"sessionTimeout":999999,"apiKeyEnabled":true,"ssoOnly":false'
+  variables_regex_names: (?i)^(role|roles|user_?role|is_?admin|admin|administrator|is_?superuser|superuser|is_?staff|is_?root|is_?owner|permissions?|scopes?|grants?|privileges?|access_?level|auth_?level|clearance_?level|tier|account_?type|membership_?tier|plan|price|cost|total(_?amount)?|subtotal|discount(_?percent)?|tax|fees?|balance|credits?|wallet_?balance|points|loyalty_?points|refund_?amount|credit_?limit|owner_?id|user_?id|account_?id|organization_?id|tenant_?id|created_?by|assigned_?to|customer_?id|verified|is_?verified|email_?verified|phone_?verified|kyc_?verified|approved|is_?approved|status|state|review_?status|moderation_?status|published|is_?published|flagged|is_?flagged|banned|is_?banned|suspended|is_?suspended|blocked|is_?blocked|active|is_?active|enabled|is_?enabled|disabled|is_?disabled|locked|is_?locked|trial|is_?trial|trial_?expired|subscription_?active|limit|max_?limit|quota|rate_?limit|max_?users|max_?requests|usage_?limit|storage_?limit|api_?calls_?remaining|read_?only|immutable|internal|is_?internal|is_?system|is_?test|debug|is_?deleted|deleted_?at|expires_?at|valid_?until|created_?at|updated_?at|feature_?flags|beta|is_?beta|early_?access|whitelisted|is_?whitelisted|blacklisted|two_?factor_?enabled|mfa_?enabled|mfa_?required|password_?reset_?required|force_?password_?change|session_?timeout|api_?key_?enabled|sso_?only)$
+http:
+- pre-condition:
+  - type: dsl
+    dsl:
+    - method != "GET"
+    - method != "HEAD"
+    - method != "OPTIONS"
+    condition: and
+  fuzzing:
+  - part: body
+    type: replace
+    mode: single
+    keys-regex:
+    - '{{variables_regex_names}}'
+    fuzz:
+    - 'true'
+    - '999999'
+    - '0'
+    - '"admin"'
+    - '"approved"'
+    - 'null'
+  matchers:
+  - type: dsl
+    dsl:
+    - status_code >= 200 && status_code < 400
+- pre-condition:
+  - type: dsl
+    dsl:
+    - method != "GET"
+    - method != "HEAD"
+    - method != "OPTIONS"
+    condition: and
+  fuzzing:
+  - part: body
+    type: postfix
+    mode: single
+    fuzz:
+    - '{{privileged_fields_json}}'
+  matchers:
+  - type: dsl
+    dsl:
+    - status_code >= 200 && status_code < 400

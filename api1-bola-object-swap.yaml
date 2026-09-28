@@ -1,0 +1,64 @@
+id: api1-bola-object-swap
+
+info:
+  name: API1 BOLA - Object Identifier Mutation (value-shape aware)
+  author: dast-scanner
+  severity: high
+  description: >
+    Run with `-im openapi` so nuclei itself builds valid requests from the spec;
+    no external parser needed. Instead of guessing which keys are "IDs" by name,
+    this matches on what the CURRENT value looks like (nuclei's own openapi-
+    generated placeholder, or a real captured ID) — a numeric-shaped value gets
+    numeric/boundary probes, a uuid-shaped value gets uuid probes, a path segment
+    shaped like an id gets both. This is schema-free by construction: it reacts
+    to whatever value is actually sitting in the field, wherever that value came
+    from.
+  classification: { cwe-id: CWE-639 }
+  tags: api,owasp-api1,bola,idor,dast,openapi
+
+http:
+  - fuzzing:
+      # path segments that are currently numeric (nuclei filled an integer
+      # path param, or this is a real captured numeric id)
+      - part: path
+        type: replace-regex
+        mode: single
+        values: ['/[0-9]+']
+        replace-regex: '/[0-9]+'
+        fuzz: ['/0', '/-1', '/2', '/999999', '/2147483648']
+      # path segments that are currently uuid-shaped
+      - part: path
+        type: replace-regex
+        mode: single
+        values: ['/[0-9a-fA-F-]{16,}']
+        replace-regex: '/[0-9a-fA-F-]{16,}'
+        fuzz: ['/00000000-0000-4000-8000-000000000002', '/00000000-0000-0000-0000-000000000000']
+      # any query/body value that CURRENTLY looks numeric -> numeric probes
+      - part: query
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        values: ['^-?[0-9]+$']
+        fuzz: ['0', '-1', '2', '999999', '2147483648']
+      - part: body
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        values: ['^-?[0-9]+$']
+        fuzz: ['0', '-1', '2', '999999', '2147483648']
+      # any query/body value that CURRENTLY looks uuid-shaped -> uuid probes
+      - part: query
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        values: ['^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$']
+        fuzz: ['00000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000']
+      - part: body
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        values: ['^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$']
+        fuzz: ['00000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000']
+    matchers:
+      - type: dsl
+        dsl: ['status_code >= 200 && status_code < 400']

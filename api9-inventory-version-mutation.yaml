@@ -1,0 +1,27 @@
+id: api9-inventory-version-mutation
+
+info:
+  name: API9 Improper Inventory Management - Version Mutation
+  author: dast-scanner
+  severity: medium
+  description: >
+    Unchanged: matches by PATH SHAPE (/v[0-9]+), already dictionary-free.
+  classification: { cwe-id: CWE-1059 }
+  tags: api,owasp-api9,inventory,versioning,dast
+
+http:
+  - fuzzing:
+      - part: path
+        type: replace-regex
+        mode: single
+        values: ['(?i)/v[0-9]+']
+        replace-regex: '(?i)/v[0-9]+'
+        fuzz: ['/v1', '/v2', '/v3', '/v0', '/v1.1', '/beta', '/internal']
+      - part: header
+        type: replace
+        mode: single
+        keys-regex: ['(?i)^(x-api-version|accept-version)$']
+        fuzz: ['1', '2', '0', 'beta', 'internal']
+    matchers:
+      - type: dsl
+        dsl: ['status_code >= 200 && status_code < 400']

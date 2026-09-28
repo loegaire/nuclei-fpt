@@ -1,0 +1,48 @@
+id: api6-sensitive-flow-replay-candidate
+
+info:
+  name: API6 Unrestricted Access to Sensitive Business Flows - Accepted Mutation (value-shape aware)
+  author: dast-scanner
+  severity: medium
+  description: >
+    Same value-shape logic as api1/api5, applied to state-changing business
+    flows generally rather than framed around authorization specifically.
+  classification: { cwe-id: CWE-841 }
+  tags: api,owasp-api6,business-logic,replay,dast
+
+http:
+  - pre-condition:
+      - type: dsl
+        dsl:
+          - 'method != "GET"'
+          - 'method != "HEAD"'
+          - 'method != "OPTIONS"'
+        condition: and
+    fuzzing:
+      - part: path
+        type: replace-regex
+        mode: single
+        values: ['/[0-9]+']
+        replace-regex: '/[0-9]+'
+        fuzz: ['/0', '/-1', '/2', '/999999', '/2147483648']
+      - part: path
+        type: replace-regex
+        mode: single
+        values: ['/[0-9a-fA-F-]{16,}']
+        replace-regex: '/[0-9a-fA-F-]{16,}'
+        fuzz: ['/00000000-0000-4000-8000-000000000002']
+      - part: query
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        values: ['^-?[0-9]+$']
+        fuzz: ['0', '-1', '2', '999999', '2147483648']
+      - part: body
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        values: ['^-?[0-9]+$']
+        fuzz: ['0', '-1', '2', '999999', '2147483648']
+    matchers:
+      - type: dsl
+        dsl: ['status_code >= 200 && status_code < 400']

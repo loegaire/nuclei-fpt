@@ -1,0 +1,41 @@
+id: api10-unsafe-consumption-oob-schema-wide
+
+info:
+  name: API10 Unsafe Consumption of APIs - OOB Value-Shape Probe
+  author: dast-scanner
+  severity: high
+  description: >
+    Replaced the (webhook|callback|notify|redirect) name-guess on headers with
+    value-shape matching, same as api7: target whatever currently holds a
+    URL-shaped value. Body/query still schema-wide ('.*') for maximum recall
+    per the earlier instruction that precision doesn't matter here.
+  classification: { cwe-id: CWE-918 }
+  tags: api,owasp-api10,unsafe-consumption,oob,dast
+
+http:
+  - fuzzing:
+      - part: query
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        fuzz: ['{{interactsh-url}}', 'http://{{interactsh-url}}']
+      - part: header
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        values: ['^[a-zA-Z][a-zA-Z0-9+.-]*://']
+        fuzz: ['{{interactsh-url}}', 'http://{{interactsh-url}}']
+      - part: body
+        type: replace
+        mode: single
+        keys-regex: ['.*']
+        fuzz: ['{{interactsh-url}}', 'http://{{interactsh-url}}']
+    matchers-condition: or
+    matchers:
+      - type: word
+        part: interactsh_protocol
+        words: ['http', 'https', 'dns']
+        condition: or
+      - type: word
+        part: body
+        words: ['{{interactsh-url}}']

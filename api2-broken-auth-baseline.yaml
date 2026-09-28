@@ -1,0 +1,42 @@
+id: api2-broken-auth-baseline
+
+info:
+  name: API2 Broken Authentication - Credential Mutation (openapi-native auth target)
+  author: dast-scanner
+  severity: high
+  description: >
+    In v3.3.6, running `nuclei -l openapi.yaml -im openapi` against a spec that
+    requires auth makes nuclei ITSELF report the exact carrier: e.g.
+    "[FTL] openapi: missing global auth parameter: X-API-Key", and it writes the
+    same name into required_openapi_params.yaml. That name is the auth carrier —
+    no guessing, no external parser. Workflow: (1) run once, let nuclei fail and
+    report the name(s); (2) re-run passing `-var auth_param_name=<that exact
+    name>`; this template then mutates exactly that field. auth_param_name
+    defaults to a broad guess only as a fallback for specs without declared
+    security schemes.
+  classification: { cwe-id: CWE-287 }
+  tags: api,owasp-api2,authentication,dast,openapi
+
+variables:
+  auth_param_name: '(?i)^(authorization|proxy-authorization|cookie|x-api-key|api-key|token|session)$'
+
+http:
+  - fuzzing:
+      - part: header
+        type: replace
+        mode: single
+        keys-regex: ['{{auth_param_name}}']
+        fuzz: ['', 'null', 'undefined', '0', 'invalid-credential-probe', 'Bearer invalid-credential-probe']
+      - part: query
+        type: replace
+        mode: single
+        keys-regex: ['{{auth_param_name}}']
+        fuzz: ['', 'null', 'undefined', '0', 'invalid-credential-probe']
+      - part: body
+        type: replace
+        mode: single
+        keys-regex: ['{{auth_param_name}}']
+        fuzz: ['', 'null', 'undefined', '0', 'invalid-credential-probe']
+    matchers:
+      - type: dsl
+        dsl: ['status_code >= 200 && status_code < 400']

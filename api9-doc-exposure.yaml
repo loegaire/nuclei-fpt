@@ -1,0 +1,38 @@
+id: api9-doc-exposure
+
+info:
+  name: API9 Improper Inventory Management - Exposed Docs / Debug Endpoints
+  author: dast-scanner
+  severity: medium
+  description: >
+    Unchanged: this is a fixed list of well-known CONVENTIONAL paths
+    (swagger.json, .git/config, /actuator...) — an industry-wide list, not a
+    per-target vocabulary guess, so schema-awareness doesn't apply here.
+  classification: { cwe-id: CWE-1059 }
+  tags: api,owasp-api9,inventory,exposure,dast
+
+http:
+  - raw:
+      - |
+        GET {{path}} HTTP/1.1
+        Host: {{Hostname}}
+    payloads:
+      path:
+        - /swagger.json
+        - /openapi.json
+        - /openapi.yaml
+        - /v2/api-docs
+        - /v3/api-docs
+        - /graphql
+        - /graphiql
+        - /actuator
+        - /actuator/env
+        - /.env
+        - /.git/config
+        - /admin
+        - /internal
+        - /status
+        - /metrics
+    matchers:
+      - type: dsl
+        dsl: ['status_code >= 200 && status_code < 400']

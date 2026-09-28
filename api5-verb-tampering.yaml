@@ -1,0 +1,26 @@
+id: api5-verb-tampering
+
+info:
+  name: API5 Broken Function Level Authorization - HTTP Verb Tampering
+  author: dast-scanner
+  severity: high
+  description: >
+    Unchanged: already dictionary-free — it mutates the method itself, no
+    field-name involved at all.
+  classification: { cwe-id: CWE-862 }
+  tags: api,owasp-api5,bfla,verb-tampering,dast
+
+http:
+  - fuzzing:
+      - part: method
+        type: replace
+        mode: single
+        fuzz: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'TRACE']
+      - part: header
+        type: replace
+        mode: single
+        keys-regex: ['(?i)^(x-http-method-override|x-http-method|x-method-override)$']
+        fuzz: ['DELETE', 'PUT', 'PATCH', 'GET']
+    matchers:
+      - type: dsl
+        dsl: ['status_code >= 200 && status_code < 400']

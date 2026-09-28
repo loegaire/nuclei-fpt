@@ -1,0 +1,46 @@
+id: api8-headers-cors-misconfig
+
+info:
+  name: API8 Security Misconfiguration - Missing Headers / CORS / Debug Exposure
+  author: dast-scanner
+  severity: medium
+  description: >
+    Unchanged: operates on response headers/body content, not field-name
+    vocabulary, so nothing to make schema-aware here.
+  classification: { cwe-id: CWE-16 }
+  tags: api,owasp-api8,misconfiguration,headers,cors,dast
+
+http:
+  - fuzzing:
+      - part: header
+        type: replace
+        mode: single
+        keys-regex: ['(?i)^origin$']
+        fuzz: ['https://attacker-controlled-probe.example', 'null']
+    matchers-condition: or
+    matchers:
+      - type: dsl
+        name: reflected-origin-with-credentials
+        dsl:
+          - 'contains(to_lower(header("Access-Control-Allow-Origin")), "attacker-controlled-probe") || header("Access-Control-Allow-Origin") == "*"'
+          - 'to_lower(header("Access-Control-Allow-Credentials")) == "true"'
+        condition: and
+      - type: dsl
+        name: missing-security-headers
+        dsl:
+          - 'header("X-Content-Type-Options") == ""'
+          - 'header("Strict-Transport-Security") == ""'
+          - 'header("Content-Security-Policy") == ""'
+        condition: and
+      - type: word
+        name: verbose-error-in-200
+        part: body
+        words:
+          - "Traceback (most recent call last)"
+          - "at java.lang."
+          - "System.Web.HttpException"
+          - "Fatal error:"
+          - "ORA-01"
+          - "org.springframework"
+          - "Whitelabel Error Page"
+        condition: or
