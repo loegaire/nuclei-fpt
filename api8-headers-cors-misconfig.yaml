@@ -5,32 +5,43 @@ info:
   author: dast-scanner
   severity: medium
   description: >
-    Unchanged: operates on response headers/body content, not field-name
-    vocabulary, so nothing to make schema-aware here.
+    FIXED: `type: replace` on `part: header` can only mutate a header the base
+    request already contains. Origin is a browser-added header, never present
+    in an openapi-generated request, so the old version had zero fuzz points
+    and sent zero requests. Rewritten as a standalone raw request (same
+    pattern as api9-doc-exposure) that adds the Origin header itself rather
+    than trying to mutate a header that was never there. Run this one against
+    -u directly, not -im openapi (raw templates and openapi-format input
+    don't mix in the same invocation -- see README).
   classification: { cwe-id: CWE-16 }
   tags: api,owasp-api8,misconfiguration,headers,cors,dast
 
+variables:
+  cors_probe_path: "/"
+
 http:
-  - fuzzing:
-      - part: header
-        type: replace
-        mode: single
-        keys-regex: ['(?i)^origin$']
-        fuzz: ['https://attacker-controlled-probe.example', 'null']
+  - raw:
+      - |
+        GET {{cors_probe_path}} HTTP/1.1
+        Host: {{Hostname}}
+        Origin: https://attacker-controlled-probe.example
     matchers-condition: or
     matchers:
       - type: dsl
         name: reflected-origin-with-credentials
         dsl:
-          - 'contains(to_lower(header("Access-Control-Allow-Origin")), "attacker-controlled-probe") || header("Access-Control-Allow-Origin") == "*"'
-          - 'to_lower(header("Access-Control-Allow-Credentials")) == "true"'
+          - 'contains(to_lower(all_headers), "access-control-allow-origin: https://attacker-controlled-probe.example") || contains(to_lower(all_headers), "access-control-allow-origin: *")'
+          - 'contains(to_lower(all_headers), "access-control-allow-credentials: true")'
         condition: and
+      - type: dsl
+        name: wildcard-origin-on-api
+        dsl:
+          - 'contains(to_lower(all_headers), "access-control-allow-origin: *")'
       - type: dsl
         name: missing-security-headers
         dsl:
-          - 'header("X-Content-Type-Options") == ""'
-          - 'header("Strict-Transport-Security") == ""'
-          - 'header("Content-Security-Policy") == ""'
+          - '!contains(to_lower(all_headers), "strict-transport-security:")'
+          - '!contains(to_lower(all_headers), "content-security-policy:")'
         condition: and
       - type: word
         name: verbose-error-in-200

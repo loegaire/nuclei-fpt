@@ -1,32 +1,136 @@
 id: api4-resource-consumption-bounded
-
 info:
   name: API4 Unrestricted Resource Consumption - Bounded Amplification (value-shape aware)
   author: dast-scanner
   severity: medium
-  description: >
-    Instead of guessing parameter names (limit/page_size/...), this matches
-    fields by their CURRENT value shape: nuclei's openapi mode already fills
-    integer-typed fields with a numeric placeholder, so any field currently
-    holding a numeric value is a candidate for amplification — dictionary-free
-    and works identically on real captured traffic.
-  classification: { cwe-id: CWE-770 }
+  description: 'FIXED: a bare status_code matcher can''t tell ''server accepted and used the value'' from ''server accepted the request and silently ignored/recomputed the value'' -- confirmed on POST /rest/basket/{id}/checkout, where totalPrice:-9999 returns 200 but the recorded order is totalPrice:0 (server recalculates server-side). Split into one block per probe value so each has its own reflected-value matcher requiring that literal to actually appear in the response, alongside the original bare-acceptance matcher (kept, OR''d in) so nothing already being caught is lost -- this just adds a second, named signal a downstream agent can use to separate ''confirmed applied'' from ''merely didn''t error''.'
+  classification:
+    cwe-id: CWE-770
   tags: api,owasp-api4,resource-consumption,dast,openapi
-
 http:
-  - fuzzing:
-      - part: query
-        type: replace
-        mode: single
-        keys-regex: ['.*']
-        values: ['^-?[0-9]+$']
-        fuzz: ['0', '-1', '1000', '1000000', '2147483648']
-      - part: body
-        type: replace
-        mode: single
-        keys-regex: ['.*']
-        values: ['^-?[0-9]+$']
-        fuzz: ['0', '-1', '1000', '1000000', '2147483648']
-    matchers:
-      - type: dsl
-        dsl: ['(status_code >= 200 && status_code < 400) || status_code >= 500']
+- fuzzing:
+  - part: query
+    type: replace
+    mode: single
+    keys-regex:
+    - .*
+    values:
+    - ^-?[0-9]+$
+    fuzz:
+    - '0'
+  - part: body
+    type: replace
+    mode: single
+    keys-regex:
+    - .*
+    values:
+    - ^-?[0-9]+$
+    fuzz:
+    - '0'
+  - part: query
+    type: replace
+    mode: single
+    keys-regex:
+    - .*
+    values:
+    - ^-?[0-9]+$
+    fuzz:
+    - '-1'
+  - part: body
+    type: replace
+    mode: single
+    keys-regex:
+    - .*
+    values:
+    - ^-?[0-9]+$
+    fuzz:
+    - '-1'
+  - part: query
+    type: replace
+    mode: single
+    keys-regex:
+    - .*
+    values:
+    - ^-?[0-9]+$
+    fuzz:
+    - '1000'
+  - part: body
+    type: replace
+    mode: single
+    keys-regex:
+    - .*
+    values:
+    - ^-?[0-9]+$
+    fuzz:
+    - '1000'
+  - part: query
+    type: replace
+    mode: single
+    keys-regex:
+    - .*
+    values:
+    - ^-?[0-9]+$
+    fuzz:
+    - '1000000'
+  - part: body
+    type: replace
+    mode: single
+    keys-regex:
+    - .*
+    values:
+    - ^-?[0-9]+$
+    fuzz:
+    - '1000000'
+  - part: query
+    type: replace
+    mode: single
+    keys-regex:
+    - .*
+    values:
+    - ^-?[0-9]+$
+    fuzz:
+    - '2147483648'
+  - part: body
+    type: replace
+    mode: single
+    keys-regex:
+    - .*
+    values:
+    - ^-?[0-9]+$
+    fuzz:
+    - '2147483648'
+  matchers-condition: or
+  matchers:
+  - type: dsl
+    name: accepted
+    dsl:
+    - status_code >= 200 && status_code < 400
+  - type: dsl
+    name: server-error
+    dsl:
+    - status_code >= 500
+  - type: word
+    name: reflected-0
+    part: body
+    words:
+    - '0'
+  - type: word
+    name: reflected--1
+    part: body
+    words:
+    - '-1'
+  - type: word
+    name: reflected-1000
+    part: body
+    words:
+    - '1000'
+  - type: word
+    name: reflected-1000000
+    part: body
+    words:
+    - '1000000'
+  - type: word
+    name: reflected-2147483648
+    part: body
+    words:
+    - '2147483648'
