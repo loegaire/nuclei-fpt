@@ -28,8 +28,8 @@ http:
     - 'true'
     - '999999'
     - '0'
-    - '"admin"'
-    - '"approved"'
+    - 'admin'
+    - 'approved'
     - 'null'
   matchers:
   - type: dsl

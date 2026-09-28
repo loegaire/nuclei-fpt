@@ -14,9 +14,9 @@ http:
       - part: path
         type: replace-regex
         mode: single
-        values: ['(?i)/v[0-9]+']
-        replace-regex: '(?i)/v[0-9]+'
-        fuzz: ['/v1', '/v2', '/v3', '/v0', '/v1.1', '/beta', '/internal']
+        values: ['(?i)^v[0-9]+$']
+        replace-regex: '(?i)v[0-9]+'
+        fuzz: ['v1', 'v2', 'v3', 'v0', 'v1.1', 'beta', 'internal']
       - part: header
         type: replace
         mode: single

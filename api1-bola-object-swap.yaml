@@ -23,16 +23,16 @@ http:
       - part: path
         type: replace-regex
         mode: single
-        values: ['/[0-9]+']
-        replace-regex: '/[0-9]+'
-        fuzz: ['/0', '/-1', '/2', '/999999', '/2147483648']
+        values: ['^[0-9]+$']
+        replace-regex: '[0-9]+'
+        fuzz: ['0', '-1', '2', '999999', '2147483648']
       # path segments that are currently uuid-shaped
       - part: path
         type: replace-regex
         mode: single
-        values: ['/[0-9a-fA-F-]{16,}']
-        replace-regex: '/[0-9a-fA-F-]{16,}'
-        fuzz: ['/00000000-0000-4000-8000-000000000002', '/00000000-0000-0000-0000-000000000000']
+        values: ['^[0-9a-fA-F-]{16,}$']
+        replace-regex: '[0-9a-fA-F-]{16,}'
+        fuzz: ['00000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000']
       # any query/body value that CURRENTLY looks numeric -> numeric probes
       - part: query
         type: replace

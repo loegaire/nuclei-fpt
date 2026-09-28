@@ -21,15 +21,15 @@ http:
       - part: path
         type: replace-regex
         mode: single
-        values: ['/[0-9]+']
-        replace-regex: '/[0-9]+'
-        fuzz: ['/0', '/-1', '/2', '/999999', '/2147483648']
+        values: ['^[0-9]+$']
+        replace-regex: '[0-9]+'
+        fuzz: ['0', '-1', '2', '999999', '2147483648']
       - part: path
         type: replace-regex
         mode: single
-        values: ['/[0-9a-fA-F-]{16,}']
-        replace-regex: '/[0-9a-fA-F-]{16,}'
-        fuzz: ['/00000000-0000-4000-8000-000000000002']
+        values: ['^[0-9a-fA-F-]{16,}$']
+        replace-regex: '[0-9a-fA-F-]{16,}'
+        fuzz: ['00000000-0000-4000-8000-000000000002']
       - part: query
         type: replace
         mode: single
